@@ -87,7 +87,7 @@ const getAllTeams = async (req, res) => {
     .populate({ path: "project_manager_id" })
     .populate({ path: "team_leader_ids.user_id" })
     .populate({ path: "employee_ids.user_id" })
-    
+
   res.json({
     status: "1",
     details: {
@@ -96,8 +96,34 @@ const getAllTeams = async (req, res) => {
   })
 }
 
+
+const getMyTeams = async (req, res) => {
+  const { userId } = req.userData
+  let data = await TEAMS_MODEL.find({
+    $or: [
+      { team_leader_ids: { $elemMatch: { user_id: ObjectId(userId) } } },
+      { employee_ids: { $elemMatch: { user_id: ObjectId(userId) } } }
+    ]
+  })
+    .populate({ path: "project_manager_id" })
+    .populate({ path: "team_leader_ids.user_id" })
+    .populate({ path: "employee_ids.user_id" })
+
+  res.json({
+    status: "1",
+    details: {
+      teams: data,
+      userId,
+    }
+  })
+}
+
+
+
+
 module.exports = {
   createTeam,
-  getAllTeams
+  getAllTeams,
+  getMyTeams
 };
 

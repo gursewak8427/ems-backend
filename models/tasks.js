@@ -45,10 +45,10 @@ const taskschema = new Schema({
             "SUBMITTED", // When the task is completed and submitted to the team-leader then it gone to testing mode
             "LATE_SUBMITTED", // If submit the task after dead-line
             "TESTING", // Testing phase
-            "DONE", // IF testing paas
+            "COMPLETE", // IF testing paas
             "FAILED", // If testing failed then re-assign to same or another team-leader
         ]
-    }
+    },
 }, { timestamps: true });
 
 // Compile model from schema

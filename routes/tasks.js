@@ -1,6 +1,6 @@
 const router = require("express").Router();
 const multer = require("multer");
-const { createTask, getAllTasks } = require("../controller/tasks.controller");
+const { createTask, getAllTasks, getTeamTasks, updateTask, uploadData, getData } = require("../controller/tasks.controller");
 const checkAuth = require("../helper/checkAuth");
 
 
@@ -19,6 +19,10 @@ var upload = multer({ storage: storage });
 // User Login
 router.post("/create", checkAuth, createTask)
 router.get("/", checkAuth, getAllTasks) // getAll
+router.get("/getTeamTasks/:teamId", checkAuth, getTeamTasks)  // getAll
+router.patch("/updateTask", updateTask) // getAll
+router.post("/uploadData", upload.fields([{ name: "files" }]), uploadData) // getAll
+router.post("/getData", getData) // getAll
 
 // router.post("/login", login)
 // router.get("/", checkAuth, profile)

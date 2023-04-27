@@ -1,6 +1,6 @@
 const router = require("express").Router();
 const multer = require("multer");
-const { createTeam, getAllTeams } = require("../controller/teams.controller");
+const { createTeam, getAllTeams, getMyTeams } = require("../controller/teams.controller");
 const checkAuth = require("../helper/checkAuth");
 
 
@@ -19,6 +19,7 @@ var upload = multer({ storage: storage });
 // User Login
 router.post("/create", checkAuth, createTeam)
 router.get("/", checkAuth, getAllTeams) // getAll
+router.get("/getMyTeams/", checkAuth, getMyTeams) // getAll
 
 // router.post("/login", login)
 // router.get("/", checkAuth, profile)
