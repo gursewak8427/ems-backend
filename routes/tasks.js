@@ -21,7 +21,7 @@ router.post("/create", checkAuth, createTask)
 router.get("/", checkAuth, getAllTasks) // getAll
 router.get("/getTeamTasks/:teamId", checkAuth, getTeamTasks)  // getAll
 router.patch("/updateTask", updateTask) // getAll
-router.post("/uploadData", upload.fields([{ name: "files" }]), uploadData) // getAll
+router.post("/uploadData", checkAuth, upload.fields([{ name: "files" }]), uploadData) // getAll
 router.post("/getData", getData) // getAll
 
 // router.post("/login", login)

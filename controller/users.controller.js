@@ -1,4 +1,5 @@
 const USERS_MODEL = require("../models/users");
+const ATTENDACE = require("../models/attendance");
 
 const fs = require("fs");
 const bcrypt = require("bcrypt");
@@ -374,8 +375,182 @@ const deleteOne = async (req, res) => {
   }
 }
 
+
+const markAttendace = async (req, res) => {
+  const { userId } = req.userData
+  // find date
+  let date = (new Date()).toLocaleDateString()
+  let time = (new Date()).toLocaleTimeString("en-GB")
+  console.log({ date, time })
+  let dateArr = date.split("/")
+  let day = dateArr[0]
+  let month = dateArr[1]
+  let year = dateArr[2]
+
+  let timeArr = time.split(":")
+  let hour = timeArr[0]
+  let minute = timeArr[1]
+
+  let todayAttendances = await ATTENDACE.find({
+    day,
+    month,
+    year,
+  })
+
+  var arr = []
+  if (todayAttendances.length == 0) {
+    // set all to pending by find all users
+    let users = await USERS_MODEL.find()
+    for (let index = 0; index < users.length; index++) {
+      const user = users[index];
+      if (userId == user._id) {
+        arr.push({
+          day,
+          month,
+          year,
+          hour,
+          minute,
+          user_id: ObjectId(user._id),
+          attendance: "PRESENT"
+        })
+      } else {
+        arr.push({
+          day,
+          month,
+          year,
+          hour: "",
+          minute: "",
+          user_id: ObjectId(user._id),
+        })
+      }
+    }
+
+
+    await ATTENDACE.insertMany(arr)
+    console.log(arr)
+  } else {
+
+    let todayAttendances = await ATTENDACE.findOne({
+      day,
+      month,
+      year,
+      user_id: ObjectId(userId),
+      attendance: "PRESENT"
+    })
+
+    if (todayAttendances) {
+      res.json({
+        status: "0",
+        message: "You already marked the attendance"
+      })
+      return;
+    }
+
+    await ATTENDACE.updateOne({
+      day,
+      month,
+      year,
+      user_id: ObjectId(userId),
+    }, {
+      $set: {
+        attendance: "PRESENT",
+        hour,
+        minute,
+      }
+    })
+  }
+
+
+  res.json({
+    status: "1",
+    message: "PRESENT"
+  })
+
+}
+
+
+const getTodayAttendace = async (req, res) => {
+  const { userId } = req.userData
+  // find date
+  let date = (new Date()).toLocaleDateString()
+  let time = (new Date()).toLocaleTimeString("en-GB")
+  console.log({ date, time })
+  let dateArr = date.split("/")
+  let day = dateArr[0]
+  let month = dateArr[1]
+  let year = dateArr[2]
+
+  let todayAttendances = await ATTENDACE.findOne({
+    day,
+    month,
+    year,
+    user_id: ObjectId(userId),
+  })
+
+  if (!todayAttendances) {
+    res.json({
+      status: "0",
+      message: "Today attendance not found"
+    })
+  } else {
+    res.json({
+      status: "1",
+      message: "Today attendance found",
+      details: {
+        attendance: todayAttendances
+      }
+    })
+  }
+}
+
+
+const getAllAttendaceByDate = async (req, res) => {
+  const { day, month, year } = req.body;
+
+  let totalAttendances = await ATTENDACE.find({
+    day,
+    month,
+    year,
+  }).populate('user_id')
+
+  res.json({
+    status: "1",
+    message: "Today attendance found",
+    details: {
+      totalAttendances
+    }
+  })
+
+
+}
+
+const getAllAttendaceByEmail = async (req, res) => {
+  const { email } = req.body;
+
+  let user = await USERS_MODEL.findOne({ email })
+  if (!user) {
+    res.json({ status: "0", message: "User not found" });
+    return;
+  }
+
+
+  let totalAttendances = await ATTENDACE.find({
+    user_id: ObjectId(user._id)
+  }).populate('user_id')
+
+  res.json({
+    status: "1",
+    message: "Today attendance found",
+    details: {
+      totalAttendances
+    }
+  })
+
+
+}
+
 module.exports = {
-  register, login, profile, update, getAll, deleteOne
+  getAllAttendaceByEmail, getAllAttendaceByDate, register, login, profile, update, getAll, deleteOne, markAttendace, getTodayAttendace
 };
 
 // const verifyToken = async (req, res) => {

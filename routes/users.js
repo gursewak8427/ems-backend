@@ -2,7 +2,7 @@ const router = require("express").Router();
 const multer = require("multer");
 const checkAuth = require("../helper/checkAuth");
 
-const { register, login, profile, update, getAll, deleteOne } = require("../controller/users.controller");
+const { register, login, profile, update, getAll, deleteOne, markAttendace, getTodayAttendace, getAllAttendaceByDate, getAllAttendaceByEmail } = require("../controller/users.controller");
 
 // const multer = require("multer");
 const storage = multer.diskStorage({
@@ -23,6 +23,10 @@ router.get("/", checkAuth, profile)
 router.patch("/", checkAuth, update)
 router.get("/all_list", getAll)
 router.delete("/:id", deleteOne) // delete
+router.post("/markAttendace/", checkAuth, markAttendace) // getAll
+router.post("/getTodayAttendace/", checkAuth, getTodayAttendace) // getAll
+router.post("/getAllAttendaceByDate/", getAllAttendaceByDate) // getAll
+router.post("/getAllAttendaceByEmail/", getAllAttendaceByEmail) // getAll
 
 // router.post("/verifyToken", checkAuth, verifyToken)
 // router.post("/login", studentLogin)

@@ -10,6 +10,10 @@ const uploadedData = new Schema({
         type: String,
         required: true
     },
+    parent_id: {
+        type: ObjectId,
+        ref: "users"
+    },
     submit_data: [String],
 }, { timestamps: true });
 
