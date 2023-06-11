@@ -1,5 +1,6 @@
 const USERS_MODEL = require("../models/users");
 const ATTENDACE = require("../models/attendance");
+const LEAVES = require("../models/leaves");
 
 const fs = require("fs");
 const bcrypt = require("bcrypt");
@@ -376,6 +377,7 @@ const deleteOne = async (req, res) => {
 }
 
 
+
 const markAttendace = async (req, res) => {
   const { userId } = req.userData
   // find date
@@ -383,8 +385,8 @@ const markAttendace = async (req, res) => {
   let time = (new Date()).toLocaleTimeString("en-GB")
   console.log({ date, time })
   let dateArr = date.split("/")
-  let day = dateArr[0]
-  let month = dateArr[1]
+  let day = dateArr[1]
+  let month = dateArr[0]
   let year = dateArr[2]
 
   let timeArr = time.split(":")
@@ -526,8 +528,12 @@ const getAllAttendaceByDate = async (req, res) => {
 
 const getAllAttendaceByEmail = async (req, res) => {
   const { email } = req.body;
-
-  let user = await USERS_MODEL.findOne({ email })
+  if (email == null) {
+    var { userId } = req.userData;
+    var user = await USERS_MODEL.findById(userId)
+  } else {
+    var user = await USERS_MODEL.findOne({ email })
+  }
   if (!user) {
     res.json({ status: "0", message: "User not found" });
     return;
@@ -549,8 +555,204 @@ const getAllAttendaceByEmail = async (req, res) => {
 
 }
 
+const checkLeaveWithDate = async (req, res) => {
+  let { attendance } = req.body;
+  console.log({ attendance });
+  let day = parseInt(attendance.day) < 10 ? "0" + attendance.day : attendance.day;
+  let month = parseInt(attendance.month) < 10 ? "0" + attendance.month : attendance.month;
+  let year = attendance.year;
+  let userId = attendance.user_id._id;
+  console.log({
+    userId: ObjectId(userId),
+    leave_date: {
+      day, month, year
+    }
+  });
+  leaveDetails = await LEAVES.findOne({
+    userId: ObjectId(userId),
+    "leave_date.day": day,
+    "leave_date.month": month,
+    "leave_date.year": year,
+  }).populate("userId");
+  /*
+  No Leave Found 0
+  PENDING 400
+  REJECTED 401
+  APPROVED 200
+  PAID_LEAVE 201
+  */
+  console.log({ leaveDetails });
+  if (!leaveDetails) {
+    res.json({ status: "0", message: "Not Leave Found" })
+  } else {
+    if (leaveDetails.status == "PENDING") {
+      res.json({ status: "400", message: "Not Leave Found" })
+    } else
+      if (leaveDetails.status == "REJECTED") {
+        res.json({ status: "401", message: "Not Leave Found" })
+      } else
+        if (leaveDetails.status == "APPROVED") {
+          res.json({ status: "200", message: "Not Leave Found" })
+        } else
+          if (leaveDetails.status == "PAID_LEAVE") {
+            res.json({ status: "201", message: "Not Leave Found" })
+          }
+  }
+}
+
+const applyLeave = async (req, res) => {
+  const { leave_description, leave_type, leave_date } = req.body;
+  let { userId } = req.userData;
+  console.log({ body: req.body, userId });
+
+  let leaveDetails = await LEAVES.create({
+    leave_description,
+    leave_type,
+    leave_date,
+    userId: ObjectId(userId),
+  })
+
+
+  leaveDetails = await LEAVES.findById(leaveDetails._id).populate("userId")
+
+  res.json({
+    status: "1",
+    message: "Leave Applied",
+    details: {
+      leaveDetails,
+    }
+  })
+}
+
+
+const getAllLeaves = async (req, res) => {
+  let { userId } = req.userData;
+  console.log({ userId });
+  // get url parameters
+  let { type } = req.query
+
+  leaveDetails = await LEAVES.find(type != "admin" ? {
+    userId: ObjectId(userId),
+  } : {}).populate("userId")
+
+  if (type != "admin") {
+    let totalLeaves = await USERS_MODEL.findById(userId).select("total_leaves")
+    if (!totalLeaves?.total_leaves) {
+      totalLeaves = {
+        emergency: 0,
+        medical: 0,
+        casual: 0,
+      }
+    }
+    res.json({
+      status: "1",
+      message: "Leave List Fetched",
+      details: {
+        list: leaveDetails,
+        total_leaves: totalLeaves?.total_leaves || totalLeaves
+      }
+    })
+  } else {
+    res.json({
+      status: "1",
+      message: "Leave List Fetched",
+      details: {
+        list: leaveDetails,
+      }
+    })
+  }
+}
+
+
+const processLeave = async (req, res) => {
+  let { leaveId, userId, status } = req.body;
+  let leaveDetails = await LEAVES.updateOne({
+    _id: leaveId,
+  }, {
+    $set: {
+      status,
+      response_date: (new Date()).toLocaleDateString()
+    }
+  })
+
+
+  leaveDetails = await LEAVES.findById(leaveId).populate("userId")
+
+  if (status == "APPROVED") {
+    let userDetails = await USERS_MODEL.findById(userId);
+    if (!userDetails.total_leaves) {
+      console.log("imhere");
+      userDetails.total_leaves = {
+        emergency: 0,
+        medical: 0,
+        casual: 0,
+      }
+      console.log({ userDetails });
+    }
+    console.log({ userDetails });
+    if (leaveDetails.leave_type == "EMERGENCY") {
+      userDetails.total_leaves.emergency += 1
+    }
+    if (leaveDetails.leave_type == "MEDICAL") {
+      userDetails.total_leaves.medical += 1
+    }
+    if (leaveDetails.leave_type == "CASUAL") {
+      userDetails.total_leaves.casual += 1
+    }
+    await userDetails.save();
+    leaveDetails.userId.total_leaves = userDetails.total_leaves;
+  }
+
+
+  res.json({
+    status: "1",
+    message: "Leave Updated",
+    details: {
+      leaveDetails
+    }
+  })
+}
+
+
+const closeAttendance = async (req, res) => {
+  let { userId } = req.userData;
+
+  let totalPendingAttendances = await ATTENDACE.find({
+    attendance: "PENDING"
+  }).populate('user_id')
+
+  console.log({ totalPendingAttendances });
+
+  for (let index = 0; index < totalPendingAttendances.length; index++) {
+    const pendingAttendances = totalPendingAttendances[index];
+    let day = parseInt(pendingAttendances.day) < 10 ? "0" + pendingAttendances.day : pendingAttendances.day;
+    let month = parseInt(pendingAttendances.month) < 10 ? "0" + pendingAttendances.month : pendingAttendances.month;
+    let year = pendingAttendances.year;
+    let userId = pendingAttendances.user_id._id;
+    let leaveDetails = await LEAVES.findOne({
+      userId: ObjectId(userId),
+      "leave_date.day": day,
+      "leave_date.month": month,
+      "leave_date.year": year,
+    }).populate("userId");
+    console.log({ leaveDetails });
+    if (leaveDetails && ["APPROVED", "PAID_LEAVE"].includes(leaveDetails.status)) {
+      await ATTENDACE.updateOne({ _id: pendingAttendances._id }, { $set: { attendance: leaveDetails.status == "APPROVED" ? "LEAVE" : "PAID_LEAVE" } });
+    } else {
+      await ATTENDACE.updateOne({ _id: pendingAttendances._id }, { $set: { attendance: "ABSENT" } });
+    }
+  }
+
+  res.json({
+    status: "1",
+    message: "All Attendance marked",
+  })
+}
+
+
+
 module.exports = {
-  getAllAttendaceByEmail, getAllAttendaceByDate, register, login, profile, update, getAll, deleteOne, markAttendace, getTodayAttendace
+  closeAttendance, checkLeaveWithDate, processLeave, getAllLeaves, applyLeave, getAllAttendaceByEmail, getAllAttendaceByDate, register, login, profile, update, getAll, deleteOne, markAttendace, getTodayAttendace
 };
 
 // const verifyToken = async (req, res) => {

@@ -35,6 +35,9 @@ const taskschema = new Schema({
         }],
         timestamps: true,
     },
+    columnIndex: {
+        type: Number,
+    },
     status: {
         type: String,
         default: "PENDING",

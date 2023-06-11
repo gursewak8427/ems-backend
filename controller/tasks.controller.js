@@ -31,12 +31,19 @@ const createTask = async (req, res) => {
         message: "Task name is already used",
       });
     } else {
+
+      let totalTask = TASKS_MODEL.find({
+        team_id, status: "PENDING"
+      })
+
+
       taskData = new TASKS_MODEL({
         task_name,
         task_description,
         parent_id: userId,
         team_id,
         team_leader_ids,
+        columnIndex: totalTask.length
       });
       try {
         let response = await taskData.save();
@@ -138,8 +145,35 @@ const getTeamTasks = async (req, res) => {
 
 const updateTask = async (req, res) => {
   try {
-    let { task } = req.body;
-    console.log(task)
+    let { task, isUpdateColumnIndex, isChangeColumn } = req.body;
+    if (isUpdateColumnIndex) {
+      let { data, statusData } = req.body;
+      let { SI, DI } = data;
+      let { SS, DS } = statusData;
+      if (SS == DS) {
+
+        if (SI > DI) {
+          let response = await TASKS_MODEL.updateMany(
+            { status: task.status, $and: [{ columnIndex: { $gte: DI } }, { columnIndex: { $lt: SI } }], },
+            { $inc: { columnIndex: 1 } })
+          console.log({ response });
+        } else {
+          let response = await TASKS_MODEL.updateMany(
+            { status: task.status, $and: [{ columnIndex: { $gt: SI } }, { columnIndex: { $lte: DI } }], },
+            { $inc: { columnIndex: -1 } })
+          console.log({ response });
+        }
+      } else {
+        let response2 = await TASKS_MODEL.updateMany(
+          { status: SS, columnIndex: { $gt: SI } },
+          { $inc: { columnIndex: -1 } })
+        let response3 = await TASKS_MODEL.updateMany(
+          { status: DS, columnIndex: { $gte: DI } },
+          { $inc: { columnIndex: 1 } })
+        console.log({ response2 });
+        console.log({ response3 });
+      }
+    }
     let taskId = task._id;
     delete task._id
     await TASKS_MODEL.updateOne({ _id: taskId }, { ...task })

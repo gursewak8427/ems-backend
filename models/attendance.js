@@ -29,8 +29,9 @@ const uploadedData = new Schema({
         enum: [
             "PRESENT",
             "ABSENT",
-            "LATE",
-            "PENDING"
+            "PENDING",
+            "LEAVE",
+            "PAID_LEAVE"
         ],
         default: "PENDING"
     },

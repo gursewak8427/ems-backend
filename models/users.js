@@ -85,6 +85,22 @@ const userSchema = new Schema({
         type: String,
         default: "ACTIVE",
         enum: ["ACTIVE", "BLOCKED"]
+    },
+    total_leaves: {
+        type: {
+            emergency: {
+                type: Number,
+                default: 0
+            },
+            medical: {
+                type: Number,
+                default: 0
+            },
+            casual: {
+                type: Number,
+                default: 0
+            },
+        }
     }
 }, { timestamps: true });
 
