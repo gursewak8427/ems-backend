@@ -478,8 +478,8 @@ const getTodayAttendace = async (req, res) => {
   let time = (new Date()).toLocaleTimeString("en-GB")
   console.log({ date, time })
   let dateArr = date.split("/")
-  let day = dateArr[0]
-  let month = dateArr[1]
+  let day = dateArr[1]
+  let month = dateArr[0]
   let year = dateArr[2]
 
   let todayAttendances = await ATTENDACE.findOne({
